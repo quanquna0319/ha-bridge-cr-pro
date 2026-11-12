@@ -40,27 +40,38 @@ done
 say "install root: $ROOT  port: $PORT"
 
 # ---------- 1. image ----------
+NMETA=${NMETA:-8}
+IMG_SHA=89f32fb5a1edcc9aba8ebb7d71dc24642d3b9dbe7d440006edd8eded7709565a
 IMG_OK=0
 if docker image inspect "$IMAGE_REF" >/dev/null 2>&1; then
   IMG_OK=1; say "image already present: $IMAGE_REF"
 fi
 if [ "$IMG_OK" = "0" ] && [ "${SKIP_IMAGE:-0}" != "1" ]; then
   TMP=$(mktemp -d)
-  URL="https://github.com/$REPO/releases/download/$TAG/$IMG_TARBALL"
-  say "downloading $URL"
-  if curl -fL --retry 3 --retry-delay 2 -o "$TMP/$IMG_TARBALL" "$URL"; then
-    say "verifying sha256"
-    ( cd "$TMP" && curl -fsSL -o SHA256SUMS \
-        "https://github.com/$REPO/releases/download/$TAG/SHA256SUMS" \
-      && sha256sum -c SHA256SUMS --ignore-missing ) || die "checksum verification failed"
-    say "docker load"
-    docker load -i "$TMP/$IMG_TARBALL" && IMG_OK=1 || true
-    rm -rf "$TMP"
-  else
-    rm -rf "$TMP"
-    say "release download failed, trying the upstream registry"
-    docker pull "$IMAGE_REF" && IMG_OK=1 || true
+  BASE="https://github.com/$REPO/releases/download/$TAG"
+  say "downloading $NMETA parts of $IMG_TARBALL from $BASE"
+  i=0
+  while [ "$i" -lt "$NMETA" ]; do
+    N=$(printf '%02d' "$i")
+    PART="$IMG_TARBALL.part$N"
+    say "  part$N"
+    curl -fL --retry 5 --retry-delay 2 --retry-all-errors -C - \
+      -o "$TMP/$PART" "$BASE/$PART" || die "download failed: $PART"
+    i=$((i + 1))
+  done
+  say "concatenating and verifying sha256"
+  cat "$TMP"/$IMG_TARBALL.part* > "$TMP/$IMG_TARBALL"
+  GOT=$(sha256sum "$TMP/$IMG_TARBALL" | awk '{print $1}')
+  if [ "$GOT" != "$IMG_SHA" ]; then
+    die "image sha256 mismatch: got $GOT want $IMG_SHA"
   fi
+  say "sha256 OK, docker load"
+  docker load -i "$TMP/$IMG_TARBALL" && IMG_OK=1 || true
+  rm -rf "$TMP"
+fi
+if [ "$IMG_OK" = "0" ] && [ "${SKIP_IMAGE:-0}" != "1" ]; then
+  say "release download failed, trying the upstream registry"
+  docker pull "$IMAGE_REF" && IMG_OK=1 || true
 fi
 [ "$IMG_OK" = "1" ] || die "no usable image -- pull $IMAGE_REF manually, then rerun with SKIP_IMAGE=1"
 
