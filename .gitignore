@@ -1,0 +1,6 @@
+# build / runtime artefacts
+images/*.tar.gz
+*.log
+__pycache__/
+*.pyc
+.env
