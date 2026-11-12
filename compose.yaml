@@ -1,0 +1,12 @@
+services:
+  ha-bridge:
+    image: crpi-w1apw3w3zzp43y80.cn-shanghai.personal.cr.aliyuncs.com/weidaye1122/ha_bridge:latest
+    container_name: ha-bridge
+    user: root
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      APP_PORT: 18080
+    volumes:
+      - /vol1/1000/docker/ha-bridge/data:/data
+      - /vol1/1000/docker/ha-bridge/secrets:/run/secrets
