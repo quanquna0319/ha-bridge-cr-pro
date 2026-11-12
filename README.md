@@ -86,11 +86,24 @@ docker load -i ha_bridge_0.8.6_amd64.tar.gz
 docker images | grep ha_bridge
 ```
 
-也可以直接连原厂仓库：
+**方式 B — 原厂仓库直连**（网络能通阿里云个人版镜像仓库时最省事）：
 
 ```sh
 docker pull crpi-w1apw3w3zzp43y80.cn-shanghai.personal.cr.aliyuncs.com/weidaye1122/ha_bridge:latest
 ```
+
+**方式 C — GHCR（需登录，仓库为私有包）**：
+
+```sh
+echo <YOUR_GITHUB_TOKEN> | docker login ghcr.io -u quanquna0319 --password-stdin
+docker pull ghcr.io/quanquna0319/ha-bridge-cr-pro:0.8.6-cr-pro
+docker tag  ghcr.io/quanquna0319/ha-bridge-cr-pro:0.8.6-cr-pro \
+            crpi-w1apw3w3zzp43y80.cn-shanghai.personal.cr.aliyuncs.com/weidaye1122/ha_bridge:latest
+```
+
+三个 tag 指向同一个 manifest（`sha256:71023062a7be17420c8fa47080a30e39a0d35f16fc3617374b4914a0395ae63b`）。
+必须重新 tag 成原厂名字，因为 `compose.yaml` 里的 `image:` 是固定的——补丁不依赖镜像名，
+但 compose 文件按工单保持原样。
 
 ### 3.2 建目录与 compose.yaml
 
@@ -228,6 +241,9 @@ sh /vol1/1000/docker/ha-bridge/cr-pro/deploy.sh        # 重新解锁
 | `scripts/restore-admin.sh` | 还原 admin 口令 |
 | `docs/reverse-notes.md` | 保护形态、门禁定位过程、函数签名与证据编号 |
 | `verification.txt` | 10.0.0.9 上的实测回显存档 |
+| `compose.yaml` | 原始工单 compose（未改动） |
+| `cr-pro/compose.override.yaml` | 叠加补丁挂载的 override |
+| `SHA256SUMS` | 全部交付文件的 sha256 |
 
 **改了什么**（相对上游镜像）：
 
@@ -282,5 +298,8 @@ docker exec ha-bridge cat -A /opt/venv/lib/python3.12/site-packages/zzz_ha_bridg
 
 ---
 
-**范围**：本仓库供自有或已获书面授权的实例使用（授权范围内测试、教学演示、离线环境复原）。
-镜像与补丁取自被测环境本身，不含原厂私钥或签名材料；补丁只覆写运行期判定函数，不修改原厂二进制。
+## 九、技术摘要
+
+- 补丁不修改原厂二进制、不伪造签名、不含原厂私钥；只在运行期覆写两个判定函数。
+- 全部交付文件的 sha256 在 [`SHA256SUMS`](SHA256SUMS)；`install.sh` 下载镜像后会自动校验。
+- 补丁文件共 98 + 8290 字节，两条路径合计覆写 7 个函数。
