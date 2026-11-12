@@ -73,19 +73,31 @@ sudo SKIP_IMAGE=1 sh scripts/install.sh
 
 ### 3.1 准备镜像
 
-镜像 `ha_bridge:latest`（0.8.6，linux/amd64，366 MB）已作为 Release 资产提供离线 tar.gz：
+镜像 `ha_bridge:latest`（0.8.6，linux/amd64，366 MB / 158 MiB 压缩后）以 **8 个 20 MiB 分卷**提供在 Release 里
+（GitHub 单个资产直传大文件在本机链路上会断流，分卷是稳定做法）。`install.sh` 已内置这套流程，
+手动安装时照抄即可：
 
 ```sh
-curl -L -o ha_bridge_0.8.6_amd64.tar.gz \
-  https://github.com/quanquna0319/ha-bridge-cr-pro/releases/download/v0.8.6-cr-pro.1/ha_bridge_0.8.6_amd64.tar.gz
+TAG=v0.8.6-cr-pro.1
+BASE=https://github.com/quanquna0319/ha-bridge-cr-pro/releases/download/$TAG
+mkdir -p /tmp/hb && cd /tmp/hb
 
-# 校验（值见同目录 SHA256SUMS）
-sha256sum -c SHA256SUMS --ignore-missing
+for i in 0 1 2 3 4 5 6 7; do
+  N=$(printf '%02d' $i)
+  curl -fL --retry 5 -C - -o ha_bridge_0.8.6_amd64.tar.gz.part$N \
+    "$BASE/ha_bridge_0.8.6_amd64.tar.gz.part$N"
+done
+
+# 合并 + 校验（整包 165981569 字节）
+cat ha_bridge_0.8.6_amd64.tar.gz.part* > ha_bridge_0.8.6_amd64.tar.gz
+sha256sum ha_bridge_0.8.6_amd64.tar.gz
+# 期望 89f32fb5a1edcc9aba8ebb7d71dc24642d3b9dbe7d440006edd8eded7709565a
 
 docker load -i ha_bridge_0.8.6_amd64.tar.gz
 docker images | grep ha_bridge
 ```
 
+分卷的逐个 sha256 在 [`SHA256SUMS`](SHA256SUMS) 里，可先验后合并。
 **方式 B — 原厂仓库直连**（网络能通阿里云个人版镜像仓库时最省事）：
 
 ```sh
