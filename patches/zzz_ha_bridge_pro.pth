@@ -1,0 +1,1 @@
+import sys, os; _r=os.environ.get("APP_ROOT","/app"); sys.path.insert(0,_r); import ha_bridge_pro
