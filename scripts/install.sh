@@ -19,6 +19,7 @@ DATA="$ROOT/data"
 SECRETS="$ROOT/secrets"
 CRPRO="$ROOT/cr-pro"
 PORT=${APP_PORT:-18080}
+CNAME=${CONTAINER_NAME:-ha-bridge}
 TAG=${TAG:-v0.8.6-cr-pro.1}
 REPO=${REPO:-quanquna0319/ha-bridge-cr-pro}
 IMG_TARBALL=ha_bridge_0.8.6_amd64.tar.gz
@@ -89,23 +90,19 @@ else
 services:
   ha-bridge:
     image: crpi-w1apw3w3zzp43y80.cn-shanghai.personal.cr.aliyuncs.com/weidaye1122/ha_bridge:latest
-    container_name: ha-bridge
+    container_name: ${CNAME}
     user: root
     restart: unless-stopped
     network_mode: host
     environment:
-      APP_PORT: 18080
+      APP_PORT: ${PORT}
     volumes:
-      - /vol1/1000/docker/ha-bridge/data:/data
-      - /vol1/1000/docker/ha-bridge/secrets:/run/secrets
+      - ${ROOT}/data:/data
+      - ${ROOT}/secrets:/run/secrets
 YAML
   say "wrote $ROOT/compose.yaml"
 fi
 
-# honour a custom root by rewriting the two volume paths
-if [ "$ROOT" != "/vol1/1000/docker/ha-bridge" ]; then
-  sed -i "s#/vol1/1000/docker/ha-bridge#$ROOT#g" "$ROOT/compose.yaml"
-fi
 
 # ---------- 4. patch payload ----------
 cp "$SRC/patches/ha_bridge_pro.py"      "$CRPRO/ha_bridge_pro.py"
@@ -133,7 +130,8 @@ YAML
 say "patch files installed into $CRPRO"
 
 # ---------- 6. deploy ----------
-sh "$CRPRO/deploy.sh"
+HA_BRIDGE_ROOT="$ROOT" CONTAINER_NAME="$CNAME" APP_PORT="$PORT" \
+  sh "$CRPRO/deploy.sh"
 
 say "ready: http://127.0.0.1:$PORT/login"
 say "rollback: sh $CRPRO/rollback.sh"
