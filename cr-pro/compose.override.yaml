@@ -1,0 +1,5 @@
+services:
+  ha-bridge:
+    volumes:
+      - /vol1/1000/docker/ha-bridge/cr-pro/ha_bridge_pro.py:/opt/venv/lib/python3.12/site-packages/ha_bridge_pro.py:ro
+      - /vol1/1000/docker/ha-bridge/cr-pro/zzz_ha_bridge_pro.pth:/opt/venv/lib/python3.12/site-packages/zzz_ha_bridge_pro.pth:ro
